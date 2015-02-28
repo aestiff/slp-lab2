@@ -6,11 +6,14 @@ Created on Feb 26, 2015
 
 import numpy as np
 from numpy import Infinity
+import prob1
+import nltk
 
 class Viterbi:
     def __init__(self, transitionProbs, emissionProbs):
         # convert dictionaries to numpy matrices
-        self.tagIndex = sorted(set([otherTag for (tag, otherTag) in transitionProbs.keys()]))
+        self.tagIndex = set([otherTag for (tag, otherTag) in transitionProbs.keys()])
+        self.tagIndex = sorted(self.tagIndex.union(set([tag for (tag,otherTag) in transitionProbs.keys()])))        
         self.wordIndex = sorted(set([word for (word, tag) in emissionProbs.keys()]))    
         self.transitionProbs = np.ndarray((len(self.tagIndex),len(self.tagIndex)))
         self.transitionProbs.fill(Infinity)
@@ -53,7 +56,19 @@ class Viterbi:
         
 
 if __name__ == '__main__':
-    tData = {("NN","NN"):2,("VB","NN"):1,("VB","VB"):2,("NN","VB"):3, ("NN","start"):6,("VB","start"):3}
-    eData = {("dog","NN"):5, ("bark","VB"):4, ("cat","NN"):5}
-    v = Viterbi(tData,eData)
-    print(v.findShortestPath(["bark","dog"]))
+#    tData = {("NN","NN"):2,("VB","NN"):1,("VB","VB"):2,("NN","VB"):3, ("NN","start"):6,("VB","start"):3}
+#    eData = {("dog","NN"):5, ("bark","VB"):4, ("cat","NN"):5}
+    full_training=nltk.corpus.treebank.tagged_sents()[0:3500]
+    training_set1=full_training[0:1750]
+    training_set2=full_training[1750:]
+    test_set=nltk.corpus.treebank.tagged_sents()[3500:]
+
+    print("counting...")
+    (wrdtagcount_table,tagtagcount_table) =    prob1.calculateprobtables(full_training)
+    (wrdtagcount_table,tagtagcount_table) =    prob1.calculateprobtables(training_set1)
+
+    print("viterbing...")
+    v = Viterbi(tagtagcount_table,wrdtagcount_table)
+    for i in range(10):
+        print(training_set1[i])
+        print(v.findShortestPath([word for (word,tag) in training_set1[i]]))

@@ -29,7 +29,7 @@ def calculateprobtables(training):
 
 
 	for element in training:
-		for index in xrange(len(element)):
+		for index in range(len(element)):
 			if(index==0):
 				tagtagcount_table[(element[0][1],'start')] = 0
 			elif(index == (len(element)-1)):
@@ -39,7 +39,7 @@ def calculateprobtables(training):
 	
 
 	for element in training:
-		for index in xrange(len(element)):
+		for index in range(len(element)):
 			if(index==0):
 				tagtagcount_table[(element[0][1],'start')] = tagtagcount_table[(element[0][1],'start')] + 1
 			elif(index == (len(element)-1)):
