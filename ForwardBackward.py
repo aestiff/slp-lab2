@@ -5,6 +5,7 @@ Created on Mar 2, 2015
 '''
 import nltk
 import numpy as np
+import math
 
 class ForwardBackward(object):
     '''
@@ -80,8 +81,8 @@ def logExpSumTrick(lst):
     largest = max(lst)
     sum = 0
     for prob in lst:
-	sum += exp(prob-largest)
-    sum = log(sum)
+	sum += math.exp(prob-largest)
+    sum = math.log(sum)
     sum = largest + sum
 	
     return sum
