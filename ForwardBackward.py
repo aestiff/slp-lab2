@@ -17,15 +17,15 @@ class ForwardBackward(object):
         Vocab is a list of words.
         States is a list of tags.
         '''
-        #initialize the vocab and states lists for class-level use
+        #TODO: initialize the vocab and states lists for class-level use
         
     def train(self, observations):
         '''
         Observations is a list of sentences, where each sentence is a list of untagged words.
         '''
         # initialize transmission, emission probs
-        A = np.ndarray()
-        B = np.ndarray()
+        A = np.ndarray() #TODO: initialize this correctly
+        B = np.ndarray() #TODO: initialize this correctly
         
         converged = False
         while not converged:
@@ -34,14 +34,17 @@ class ForwardBackward(object):
             for sent in observations:
                 alpha = self._forward(sent)
                 beta = self._backward(sent)
-                #figure out gamma and ksi (E-step)
-                #recalculate transition, emissions (A and B; M-step)
-            if oldA - A < 0.01 and oldB - B < 0.01: # this is dumb, not sure how to measure convergence yet
+                #TODO: figure out gamma and ksi (E-step)
+                #TODO: recalculate transition, emissions (A and B; M-step)
+            if oldA - A < 0.01 and oldB - B < 0.01: #TODO: fix this. 
+                #so far it's dumb, not sure how to measure convergence yet
                 converged = True 
     
         
         
     def _forward(self, sentence):
+        #TODO: adjust this so that it's doing the forward algorithm,
+        # instead of Viterbi
         alpha = np.ndarray((len(sentence),len(self.tagIndex)))
         alpha.fill(Infinity)
         for i in range(len(self.tagIndex)):
@@ -67,3 +70,8 @@ class ForwardBackward(object):
                     wordIdx = self.wordIndex.index('UNK')
                 alpha[j,i] = np.min(transitionArray) + self.emissionProbs[[wordIdx],[i]]
         return alpha
+
+    def _backward(self, sentence):
+        #TODO: implement backward algorithm
+        beta = np.ndarray()
+        return beta
