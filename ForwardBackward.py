@@ -79,7 +79,7 @@ class ForwardBackward(object):
 def logExpSumTrick(lst):
     largest = max(lst)
     sum = 0
-    for prob in list:
+    for prob in lst:
 	sum += exp(prob-largest)
     sum = log(sum)
     sum = largest + sum
