@@ -32,8 +32,13 @@ class Viterbi:
         viterbi.fill(Infinity)
         for i in range(len(self.tagIndex)):
             # initialize each state according to its neg log prob given the start state
+            wordIdx = 0
+            try:
+                wordIdx = self.wordIndex.index(sentence[0])
+            except ValueError:
+                wordIdx = self.wordIndex.index('UNK')
             viterbi[0,i] = self.transitionProbs[i,self.tagIndex.index("start")]+ \
-                self.emissionProbs[self.wordIndex.index(sentence[0]),i]
+                self.emissionProbs[wordIdx,i]
             backpoint[0,i] = self.tagIndex.index("start")
         for j in range(1,len(sentence)):
             for i in range(len(self.tagIndex)):
@@ -42,8 +47,12 @@ class Viterbi:
                 # find the minimal value among them, and add the appropriate emission
                 # (neg log) prob for this state/word combo 
                 transitionArray = viterbi[[j-1],:]+self.transitionProbs[[i],:]
-                viterbi[j,i] = np.min(transitionArray) \
-                    +self.emissionProbs[[self.wordIndex.index(sentence[j])],[i]]
+                wordIdx = 0
+                try:
+                    wordIdx = self.wordIndex.index(sentence[j])
+                except ValueError:
+                    wordIdx = self.wordIndex.index('UNK')
+                viterbi[j,i] = np.min(transitionArray) + self.emissionProbs[[wordIdx],[i]]
                 backpoint[j,i] = np.argmin(transitionArray)
         lastIdx = np.argmin(viterbi[[len(sentence)-1],:])
         result = [(sentence[len(sentence)-1],self.tagIndex[lastIdx])]
@@ -51,9 +60,24 @@ class Viterbi:
             result.insert(0, (sentence[k-1],self.tagIndex[backpoint[k,lastIdx]]))
             lastIdx = backpoint[k,lastIdx]
         return result
-                    
-            
-        
+'''
+This method assumes that both sets are ordered in the same fashion
+and contain the same sentences.
+'''                    
+def countErrors(groundTruthSet, labelledSet):
+    errorCount = 0
+    totalCount = 0
+    for i in range(len(groundTruthSet)):
+        for j in range(len(groundTruthSet[i])):
+            totalCount += 1
+            (word1,tag1) = groundTruthSet[i][j]
+            (word2,tag2) = labelledSet[i][j]
+            if word1 == word2:
+                if tag1 != tag2:
+                    errorCount += 1
+            else:
+                raise Exception("Sentences don't match")
+    return float(errorCount)/totalCount
 
 if __name__ == '__main__':
 #    tData = {("NN","NN"):2,("VB","NN"):1,("VB","VB"):2,("NN","VB"):3, ("NN","start"):6,("VB","start"):3}
@@ -65,10 +89,50 @@ if __name__ == '__main__':
 
     print("counting...")
     (wrdtagcount_table,tagtagcount_table) =    prob1.calculateprobtables(full_training)
-    (wrdtagcount_table,tagtagcount_table) =    prob1.calculateprobtables(training_set1)
+    #(wrdtagcount_table,tagtagcount_table) =    prob1.calculateprobtables(training_set1)
 
     print("viterbing...")
+#    labelTest = []
     v = Viterbi(tagtagcount_table,wrdtagcount_table)
-    for i in range(10):
-        print(training_set1[i])
-        print(v.findShortestPath([word for (word,tag) in training_set1[i]]))
+#   for i in range(len(full_training)):
+#       labelTest.append(v.findShortestPath([word for (word,tag) in full_training[i]]))
+#   print("Training error: " + str(countErrors(full_training, labelTest)))
+
+    labelTest = []
+    for i in range(len(test_set)):
+        labelTest.append(v.findShortestPath([word for (word,tag) in test_set[i]]))
+    print("Test error: " + str(countErrors(test_set, labelTest)))
+
+'''
+Step 5
+'''
+convergence = False
+
+labelTest = []
+testSetLabels = []
+(wrdtagcount_table,tagtagcount_table) = prob1.calculateprobtables(training_set1)
+v = Viterbi(tagtagcount_table,wrdtagcount_table)
+for i in range(len(training_set2)):
+        labelTest.append(v.findShortestPath([word for (word,tag) in training_set2[i]]))
+labelTest.extend(training_set1)
+(wrdtagcount_table,tagtagcount_table) = prob1.calculateprobtables(labelTest)
+v = Viterbi(tagtagcount_table,wrdtagcount_table)
+for i in range(len(test_set)):
+    testSetLabels.append(v.findShortestPath([word for (word,tag) in test_set[i]]))
+errorRate = countErrors(test_set, testSetLabels)
+print 'Test Error: '+str(errorRate)
+
+while not convergence:
+    newModel = []
+    testSetLabels = []
+    for i in range(len(training_set2)):
+        newModel.append(v.findShortestPath([word for (word,tag) in training_set2[i]]))
+    (wrdtagcount_table,tagtagcount_table) = prob1.calculateprobtables(newModel)
+    v = Viterbi(tagtagcount_table,wrdtagcount_table)
+
+    for i in range(len(test_set)):
+        testSetLabels.append(v.findShortestPath([word for (word,tag) in test_set[i]]))
+    errorRate = countErrors(test_set, testSetLabels)
+    print 'Test Error: '+str(errorRate)
+    if errorRate < 0.01:
+	convergence = True 
