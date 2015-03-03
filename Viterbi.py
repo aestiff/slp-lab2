@@ -120,7 +120,7 @@ v = Viterbi(tagtagcount_table,wrdtagcount_table)
 for i in range(len(test_set)):
     testSetLabels.append(v.findShortestPath([word for (word,tag) in test_set[i]]))
 errorRate = countErrors(test_set, testSetLabels)
-print 'Test Error: '+str(errorRate)
+print('Test Error: '+str(errorRate))
 
 while not convergence:
     newModel = []
