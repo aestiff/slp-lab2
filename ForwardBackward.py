@@ -6,6 +6,7 @@ Created on Mar 2, 2015
 import nltk
 import numpy as np
 import math
+import fwdback
 
 class ForwardBackward(object):
     '''
@@ -33,7 +34,7 @@ class ForwardBackward(object):
             oldA = A
             oldB = B
             for sent in observations:
-                alpha = self._forward(sent)
+                alpha = fwd-back.calfwdprobs(sent)
                 beta = self._backward(sent)
                 #TODO: figure out gamma and ksi (E-step)
                 #TODO: recalculate transition, emissions (A and B; M-step)

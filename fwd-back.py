@@ -143,6 +143,6 @@ taglist = listofpostags(full_training).keys()
 
 #print taglist
 Fprobs = calfwdprobs(tagtagcount_table,wrdtagcount_table,sentence,taglist)
-print Fprobs
+print(Fprobs)
 Bprobs = calbackprobs(tagtagcount_table,wrdtagcount_table,sentence,taglist)
-print Bprobs
+print (Bprobs)
