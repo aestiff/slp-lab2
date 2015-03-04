@@ -6,7 +6,7 @@ Created on Mar 2, 2015
 import nltk
 import numpy as np
 import math
-import fwdback
+import fwdback_mat
 
 class ForwardBackward(object):
     '''
@@ -34,9 +34,11 @@ class ForwardBackward(object):
             oldA = A
             oldB = B
             for sent in observations:
-                alpha = fwd-back.calfwdprobs(sent)
-                beta = self._backward(sent)
+                alpha = fwdback_mat.calfwdprobs(A, B, sent, self.vocab)
+                beta = fwdback_mat.calbackprobs(A, B, sent, self.vocab)
                 #TODO: figure out gamma and ksi (E-step)
+                gamma = alpha*beta/alpha[self.vocab.index("stop"),alpha.shape()[1]]
+                ksi = 1 # start here!
                 #TODO: recalculate transition, emissions (A and B; M-step)
             if oldA - A < 0.01 and oldB - B < 0.01: #TODO: fix this. 
                 #so far it's dumb, not sure how to measure convergence yet
