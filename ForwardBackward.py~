@@ -76,8 +76,7 @@ class ForwardBackward(object):
         #TODO: implement backward algorithm
         beta = np.ndarray()
         return beta
-<<<<<<< HEAD
-=======
+
 
 def logExpSumTrick(lst):
     largest = max(lst)
@@ -88,4 +87,3 @@ def logExpSumTrick(lst):
     sum = largest + sum
 	
     return sum
->>>>>>> 41c7415e5fa15e544e4954cd2a173d25a1aec1ea

@@ -3,136 +3,103 @@ import prob1
 import nltk
 from nltk.corpus import treebank
 import numpy as np
+from numpy import Infinity
 
 #Computing forward probabilities
-def calfwdprobs(A,B,sentence,taglist):
+def calfwdprobs(transitionProbs,emissionProbs,sentence,wordIndex,taglist):
 
-	fwdprobs = {}
-	for tag in taglist:
-		for i in range(len(sentence) + 2):
-			fwdprobs[(tag,i)] = 0
-
+	
+	alpha = np.ndarray((len(taglist),(len(sentence)+2)))
+	alpha.fill(math.log(0.001))
 	
 	
 	#First Step (from start to other tags)
-	for tag in taglist:
-		try:
-			em_prob = B[(sentence[0][0],tag)] 
-		except KeyError:
-			em_prob = math.log(0.01)#B[('UNK',tag)]
-		try:
-			trans_prob = A[(tag,'start')] 
-		except KeyError:
-			trans_prob = math.log(0.01)
-		fwdprobs[(tag,1)] = trans_prob + em_prob 
-		
-		
+	for i in range(len(taglist)):
+            # initialize each state according to its neg log prob given the start state
+            wordIdx = 0
+            try:
+                wordIdx = wordIndex.index(sentence[0])
+            except ValueError:
+                wordIdx = wordIndex.index('UNK')
+            alpha[i,1] = transitionProbs[i,tagIndex.index("start")]+ emissionProbs[wordIdx,i]
+        #################################################        
+	
 	#Next steps	
 	lst = []
 	for time in range(2,len(sentence)+1):
-		for tag in taglist:
+		for i in range(len(taglist)):
 			lst = []
-			for tagim1 in taglist:
-				try:
-					em_prob = B[(sentence[time-1][0],tag)] 
-				except KeyError:
-					em_prob = math.log(0.01)#B[('UNK',tag)]
-				try:
-					trans_prob = A[(tag,tagim1)] 
-				except KeyError:
-					trans_prob = math.log(0.01)
-				lst.append(fwdprobs[(tagim1,time-1)] + trans_prob + em_prob)
-			fwdprobs[(tag,time)] = logExpSumTrick(lst)
-			
+			for tim1 in range(len(taglist)):
+				wordIdx = 0
+            			try:
+                			wordIdx = wordIndex.index(sentence[time-1])
+            			except ValueError:
+                			wordIdx = wordIndex.index('UNK')
+				lst.append(alpha[tim1,time-1] + transitionProbs[i,tim1]+ emissionProbs[wordIdx,i])
+			alpha[i,time] = logExpSumTrick(lst)
+	#####################################################
+	
 	#Last step ( when you are at stop )		
 	lst = []
-	for tag in taglist:
-		try:
-			trans_prob = A[('stop',tag)] 
-		except KeyError:
-			trans_prob = math.log(0.01)
-		lst.append(fwdprobs[(tag,len(sentence))] + trans_prob)		
-	fwdprobs[('stop',len(sentence)+1)] = logExpSumTrick(lst)
-	return fwdprobs
+	for i in range(len(taglist)):
+		lst.append(alpha[i,len(sentence)] + transitionProbs[taglist.index("stop"),i])
+				
+	alpha[(tagIndex.index("stop")),(len(sentence)+1)] = logExpSumTrick(lst)
+	######################################################
+	
+	return alpha
 
 #Computing backward probabilities
-def calbackprobs(A,B,sentence,taglist):
+def calbackprobs(transitionProbs,emissionProb,sentence,wordIndex,taglist):
 
-	backprobs = {}
 	
-	for tags in taglist:
-		for i in range(len(sentence) + 2):
-			backprobs[(tags,i)] = 0
-			
+	beta = np.ndarray((len(taglist),(len(sentence)+2)))
+	beta.fill(math.log(0.001))
+	
+	
 	#First Step (from stop to other tags)
-	for tag in taglist:
-		try:
-			trans_prob = A['stop'][tag]
-		except KeyError:
-			trans_prob = math.log(0.01)
-		backprobs[(tag,len(sentence))] = trans_prob
-			
+	for i in range(len(taglist)):
+		beta[i,len(sentence)] = transitionProbs[taglist.index('stop'),i]
+	
+	#######################################		
 	
 	#Next steps
 	lst = []	
 	for time in reversed(range(1,len(sentence))):
-		for tag in taglist:
+		for i in range(len(taglist)):
 			lst = []
-			for tagip1 in taglist:
-				try:
-					em_prob = B[tag][sentence[time][0]]
-				except KeyError:
-					em_prob = math.log(0.01)
-				try:
-					trans_prob = A[tagip1][tag]
-				except KeyError:
-					trans_prob = math.log(0.01)
-				lst.append(backprobs[(tagip1,time+1)] + em_prob + trans_prob)
-			backprobs[(tag,time)] = logExpSumTrick(lst)
-			
+			for tip1 in range(len(taglist)):
+				wordIdx = 0
+            			try:
+                			wordIdx = wordIndex.index(sentence[time])
+            			except ValueError:
+                			wordIdx = wordIndex.index('UNK')
+                		lst.append(beta[tip1,time+1] + transitionProbs[tip1,i]+ emissionProbs[wordIdx,tip1])
+			beta[i,time] = logExpSumTrick(lst)
+	#########################################		
 			
 	#Last step ( when you are at start )		
 	lst = []
-	for tag in taglist:
-		try:
-			em_prob = B[tag][sentence[1][0]]
-		except KeyError:
-			em_prob = math.log(0.01)
-		try:
-			trans_prob = A[tag]['start']
-		except KeyError:
-			trans_prob = math.log(0.01)
-		lst.append(backprobs[(tag,1)] + trans_prob + em_prob)		
-	backprobs[('start',0)] = logExpSumTrick(lst)
-	return backprobs
+	for i in range(len(taglist)):
+		wordIdx = 0
+            	try:
+                	wordIdx = wordIndex.index(sentence[0])
+            	except ValueError:
+                	wordIdx = wordIndex.index('UNK')
+		lst.append(beta[i,1] + transitionProbs[i,taglist.index('start')]+ emissionProbs[wordIdx,i])		
+	beta[taglist.index("start"),0] = logExpSumTrick(lst)
+	
+	##########################################
 	
 	
-
-
+	return beta
 	
-def listofpostags(training):
-	tagcount = {}	
 	
-	tagcount['start'] = 0
-	tagcount['stop'] = 0
-	
-	for element in training:
-		for pairs in element:
-			tagcount[pairs[1]] = 0
-
-	for element in training:
-		tagcount['start'] = tagcount['start'] + 1
-		tagcount['stop'] = tagcount['stop'] + 1
-		for pairs in element:
-			tagcount[pairs[1]] = tagcount[pairs[1]] + 1
-	
-	return tagcount
-			
 def logExpSumTrick(lst):
 	largest = max(lst)
-	sum = 0
+	sum = 0.0
 	for prob in lst:
-		sum += math.exp(prob-largest)
+		sum = sum + math.exp(prob-largest)
     	sum = math.log(sum)
     	sum = largest + sum
 	
@@ -149,15 +116,31 @@ print("counting...")
 (wrdtagcount_table,tagtagcount_table) = prob1.calculateprobtables(full_training)
 #(wrdtagcount_table,tagtagcount_table) = prob1.calculateprobtables(training_set1)
 
+#Create matrices
+tagIndex = set([otherTag for (tag, otherTag) in tagtagcount_table.keys()])
+tagIndex = sorted(tagIndex.union(set([tag for (tag,otherTag) in tagtagcount_table.keys()])))        
+wordIndex = sorted(set([word for (word, tag) in wrdtagcount_table.keys()]))
+    
+transitionProbs = np.ndarray((len(tagIndex),len(tagIndex)))
+transitionProbs.fill(math.log(0.001))
 
-#print sentence
-taglist = listofpostags(full_training).keys()
+for (tag, otherTag) in tagtagcount_table.keys():
+	transitionProbs[tagIndex.index(tag),tagIndex.index(otherTag)]=tagtagcount_table[(tag,otherTag)]
 
-#print taglist
+emissionProbs = np.ndarray((len(wordIndex),len(tagIndex)))
+emissionProbs.fill(math.log(0.001))
+for (word, tag) in wrdtagcount_table.keys():
+	emissionProbs[wordIndex.index(word),tagIndex.index(tag)]=wrdtagcount_table[(word,tag)]
+
+
+
 print("Forward-Backward");
-
+num=0
 for sentence in full_training:
-	Fprobs = calfwdprobs(tagtagcount_table,wrdtagcount_table,sentence,taglist)
-	#print Fprobs
-	Bprobs = calbackprobs(tagtagcount_table,wrdtagcount_table,sentence,taglist)
+	num = num + 1
+	print num
+	Fprobs = calfwdprobs(transitionProbs,emissionProbs,sentence,wordIndex,tagIndex)
+	print Fprobs
+	Bprobs = calbackprobs(transitionProbs,emissionProbs,sentence,wordIndex,tagIndex)
 	#print Bprobs
+
