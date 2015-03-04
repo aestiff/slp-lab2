@@ -48,6 +48,7 @@ class ForwardBackward(object):
         # instead of Viterbi
         alpha = np.ndarray((len(sentence)+2,len(self.tagIndex)))
         alpha.fill(Infinity)
+        
         for i in range(len(self.tagIndex)):
             # initialize each state according to its neg log prob given the start state
             wordIdx = 0
