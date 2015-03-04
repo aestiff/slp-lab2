@@ -127,12 +127,12 @@ while not convergence:
     testSetLabels = []
     for i in range(len(training_set2)):
         newModel.append(v.findShortestPath([word for (word,tag) in training_set2[i]]))
+    newModel.extend(training_set1)
     (wrdtagcount_table,tagtagcount_table) = prob1.calculateprobtables(newModel)
     v = Viterbi(tagtagcount_table,wrdtagcount_table)
-
     for i in range(len(test_set)):
         testSetLabels.append(v.findShortestPath([word for (word,tag) in test_set[i]]))
     errorRate = countErrors(test_set, testSetLabels)
-    print('Test Error: '+str(errorRate))
-    if errorRate < 0.01:
-        convergence = True 
+    print 'Test Error: '+str(errorRate)
+    if errorRate <= 0.01:
+	convergence = True 
