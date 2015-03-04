@@ -2,6 +2,7 @@ import math
 import prob1
 import nltk
 from nltk.corpus import treebank
+import numpy as np
 
 #Computing forward probabilities
 def calfwdprobs(A,B,sentence,taglist):
