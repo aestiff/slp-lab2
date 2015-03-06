@@ -3,10 +3,9 @@ Created on Mar 2, 2015
 
 @author: stiff
 '''
-import nltk
 import numpy as np
 import math
-import fwdback_mat
+from numpy import newaxis
 
 class ForwardBackward(object):
     '''
@@ -14,80 +13,142 @@ class ForwardBackward(object):
     '''
 
 
-    def __init__(self, vocab, states):
+    def __init__(self, vocab, states, A, B):
         '''
         Vocab is a list of words.
         States is a list of tags.
         '''
-        #TODO: initialize the vocab and states lists for class-level use
+        # initialize the vocab and states lists for class-level use
+        self.vocab = vocab
+        self.states = states
+        self.A = A
+        self.B = B
         
     def train(self, observations):
         '''
         Observations is a list of sentences, where each sentence is a list of untagged words.
         '''
-        # initialize transmission, emission probs
-        A = np.ndarray() #TODO: initialize this correctly
-        B = np.ndarray() #TODO: initialize this correctly
         
         converged = False
+        ii = 0
         while not converged:
-            oldA = A
-            oldB = B
+            oldA = np.copy(self.A)
+            oldB = np.copy(self.B)
             for sent in observations:
-                alpha = fwdback_mat.calfwdprobs(A, B, sent, self.vocab)
-                beta = fwdback_mat.calbackprobs(A, B, sent, self.vocab)
-                #TODO: figure out gamma and ksi (E-step)
-                gamma = alpha*beta/alpha[self.vocab.index("stop"),alpha.shape()[1]]
-                ksi = 1 # start here!
-                #TODO: recalculate transition, emissions (A and B; M-step)
-            if oldA - A < 0.01 and oldB - B < 0.01: #TODO: fix this. 
+                sent = ['start'] + sent + ['stop']
+                alpha = self._forward(sent)
+                beta = self._backward(sent)
+                # figure out gamma and ksi (E-step)
+                gamma, ksi = self._eStep(alpha, beta, sent)
+                #recalculate transition, emissions (A and B; M-step)
+                self._mStep(gamma, ksi, sent)
+                print("A:\n" + str(self.A))
+                print("old A: \n" + str(oldA))
+                print("B:\n" + str(self.B))
+                print("Old B:\n" + str(oldB))   
+            ii += 1
+            if ii == 2: # np.max(oldA - A)< 0.01 and np.max(oldB - B)< 0.01:
                 #so far it's dumb, not sure how to measure convergence yet
                 converged = True 
     
         
         
     def _forward(self, sentence):
-        #TODO: adjust this so that it's doing the forward algorithm,
-        # instead of Viterbi
-        alpha = np.ndarray((len(sentence)+2,len(self.tagIndex)))
-        alpha.fill(Infinity)
-        
-        for i in range(len(self.tagIndex)):
-            # initialize each state according to its neg log prob given the start state
-            wordIdx = 0
-            try:
-                wordIdx = self.wordIndex.index(sentence[0])
-            except ValueError:
-                wordIdx = self.wordIndex.index('UNK')
-            alpha[0,i] = self.transitionProbs[i,self.tagIndex.index("start")]+ \
-                self.emissionProbs[wordIdx,i]
+        alpha = np.ndarray((len(self.states),len(sentence)))
+        alpha.fill(math.log(0.00001))
+        tagIdx = self.states.index('start')
+        alpha[tagIdx,0] = 0        
         for j in range(1,len(sentence)):
-            for i in range(len(self.tagIndex)):
-                # here we take the negative log probs from the previous states, add appropriate 
-                # transition (neg log) probabilities to each one (they're ordered), 
-                # find the minimal value among them, and add the appropriate emission
-                # (neg log) prob for this state/word combo 
-                transitionArray = alpha[[j-1],:]+self.transitionProbs[[i],:]
+            for i in range(len(self.states)):
+                # here we take the log probs from the previous states, add appropriate 
+                # transition (log) probabilities to each one (they're ordered), 
+                # sum them with log exp sum trick, and add the appropriate emission
+                # (log) prob for this state/word combo 
+                transitionArray = alpha[:,[j-1]]+self.A[[i],:]
                 wordIdx = 0
                 try:
-                    wordIdx = self.wordIndex.index(sentence[j])
+                    wordIdx = self.vocab.index(sentence[j])
                 except ValueError:
-                    wordIdx = self.wordIndex.index('UNK')
-                alpha[j,i] = np.min(transitionArray) + self.emissionProbs[[wordIdx],[i]]
+                    wordIdx = self.vocab.index('UNK')
+                alpha[i,j] = logExpSumTrick(transitionArray) + self.B[[wordIdx],[i]]
         return alpha
 
     def _backward(self, sentence):
-        #TODO: implement backward algorithm
-        beta = np.ndarray()
+        beta = np.ndarray((len(self.states),len(sentence)))
+        beta.fill(math.log(0.00001))
+        tagIdx = self.states.index('stop')
+        beta[tagIdx,len(sentence)-1] = 0        
+        for j in range(len(sentence)-2,-1,-1):
+            for i in range(len(self.states)):
+                # here we take the log probs from the previous states, add appropriate 
+                # transition (log) probabilities to each one (they're ordered), 
+                # sum them with log exp sum trick, and add the appropriate emission
+                # (log) prob for this state/word combo 
+                wordIdx = 0
+                try:
+                    wordIdx = self.vocab.index(sentence[j+1])
+                except ValueError:
+                    wordIdx = self.vocab.index('UNK')
+                #print("Beta:" + str(beta[:,[j+1]]))
+                #print("A: " + str(self.A[:,[i]]))
+                #print("B: " + str(self.B[[wordIdx],:].T))
+                transitionArray = beta[:,[j+1]]+self.A[:,[i]]+self.B[[wordIdx],:].T
+                #print("Trans: " + str(transitionArray))
+                beta[i,j] = logExpSumTrick(transitionArray )
         return beta
+    
+    def _eStep(self, alpha, beta, sent):
+        gamma = alpha+beta-alpha[self.states.index("stop"),alpha.shape[1]-1]
+        print("Alpha:\n" + str(alpha))
+        print("Beta:\n" + str(beta))
+        print("Gamma:\n" + str(gamma))
+        ksi = np.ndarray((len(sent)-1,len(self.states), len(self.states)))
+        for t in range(len(sent)-1):
+            ksi[t] = alpha[:,t] + self.A  + self.B[[self.vocab.index(sent[t+1])],:].T + beta[:,[t+1]] - alpha[self.states.index("stop"),alpha.shape[1]-1]
+        print("Ksi:\n" + str(ksi))
+        return gamma, ksi
 
+    def _mStep(self, gamma, ksi, sent):
+        for i in range(len(self.states)):
+            for j in range(len(self.states)):
+                self.A[i,j] = logExpSumTrick(ksi[:,i,j])
+        temp = np.ndarray((len(sent),len(self.states)))
+        for t in range(len(sent)-1):
+            for j in range(len(self.states)):
+                temp[t,j] = logExpSumTrick(ksi[t,:,j])
+        denom = np.ndarray(len(self.states))
+        for j in range(len(self.states)):
+            denom[j] = logExpSumTrick(temp[:,j])
+        self.A = self.A / denom
+        bDenom = logExpSumTrick(gamma,1)[:,newaxis]
+        sentSet = sorted(set(sent))
+        for word in sentSet:
+            #self.B[vocab.index(word),:]
+            self.B[vocab.index(word),:] = (logExpSumTrick(np.take(gamma, [i for i,x in enumerate(sent) if x == word], 1),1))/bDenom.T
 
-def logExpSumTrick(lst):
-    largest = max(lst)
-    sum = 0
-    for prob in lst:
-	sum += math.exp(prob-largest)
-    sum = math.log(sum)
-    sum = largest + sum
-	
-    return sum
+def logExpSumTrick(array,axis=None):
+    largest = np.max(array,axis)
+    #print("largest: " + str(largest))
+    total = np.sum(np.exp(array-largest),axis)
+#     for prob in array:
+#         total += math.exp(prob-largest)
+    total = np.log(total)
+    total = largest + total
+    return total
+
+if __name__ == '__main__':
+    tData = {("NN","NN"):-2,("VB","NN"):-1,("VB","VB"):-2,("NN","VB"):-3, ("NN","start"):-6,("VB","start"):-3,("stop","VB"):-2,("stop","NN"):-4}
+    eData = {("dog","NN"):-5, ("bark","VB"):-4, ("cat","NN"):-5, ("stop","stop"):0, ("start","start"):0}
+    vocab = sorted(set([word for (word, tag) in eData.keys()]))
+    states = set([otherTag for (tag, otherTag) in tData.keys()])
+    states = sorted(states.union(set([tag for (tag,otherTag) in tData.keys()])))
+    A = np.ndarray((len(states),len(states)))
+    A.fill(math.log(0.00001))
+    B = np.ndarray((len(vocab),len(states)))
+    for (tag, otherTag) in tData.keys():
+        A[states.index(tag),states.index(otherTag)]=tData[(tag,otherTag)]
+    B.fill(math.log(0.001))
+    for (word, tag) in eData.keys():
+        B[vocab.index(word),states.index(tag)]=eData[(word,tag)]
+    fb = ForwardBackward(vocab, states, A, B)
+    fb.train([["dog","bark"]])

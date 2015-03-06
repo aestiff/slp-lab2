@@ -127,15 +127,14 @@ def listofpostags(training):
 	
 	return tagcount
 			
-def logExpSumTrick(lst):
-	largest = max(lst)
-	sum = 0
-	for prob in lst:
-		sum += math.exp(prob-largest)
-    	sum = math.log(sum)
-    	sum = largest + sum
-	
-	return sum		
+def logExpSumTrick(array):
+    largest = max(array)
+    total = 0
+    for prob in array:
+        total += math.exp(prob-largest)
+    total = math.log(total)
+    total = largest + total	
+    return total		
 	
 full_training=nltk.corpus.treebank.tagged_sents()[0:300]
 #training_set1=full_training[0:1750]
