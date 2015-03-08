@@ -41,7 +41,7 @@ class ForwardBackward(object):
                 # figure out gamma and ksi (E-step)
                 gamma, ksi = self._eStep(alpha, beta, sent)
                 #recalculate transition, emissions (A and B; M-step)
-                self._mStep(gamma, ksi, sent)
+                self.A, self.B = self._mStep(gamma, ksi, self.A, self.B, sent)
                 print("A:\n" + str(self.A))
                 print("old A: \n" + str(oldA))
                 print("B:\n" + str(self.B))
@@ -108,10 +108,10 @@ class ForwardBackward(object):
         print("Ksi:\n" + str(ksi))
         return gamma, ksi
 
-    def _mStep(self, gamma, ksi, sent):
+    def _mStep(self, gamma, ksi, A, B, sent):
         for i in range(len(self.states)):
             for j in range(len(self.states)):
-                self.A[i,j] = logExpSumTrick(ksi[:,i,j])
+                A[i,j] = logExpSumTrick(ksi[:,i,j])
         temp = np.ndarray((len(sent),len(self.states)))
         for t in range(len(sent)-1):
             for j in range(len(self.states)):
@@ -119,17 +119,17 @@ class ForwardBackward(object):
         denom = np.ndarray(len(self.states))
         for j in range(len(self.states)):
             denom[j] = logExpSumTrick(temp[:,j])
-        self.A = self.A / denom
-        bDenom = logExpSumTrick(gamma,1)[:,newaxis]
+        A = A / denom
+        bDenom = logExpSumTrick(gamma,1)
         sentSet = sorted(set(sent))
         for word in sentSet:
-            #self.B[vocab.index(word),:]
-            self.B[vocab.index(word),:] = (logExpSumTrick(np.take(gamma, [i for i,x in enumerate(sent) if x == word], 1),1))/bDenom.T
-
+            B[vocab.index(word),:] = (logExpSumTrick(np.take(gamma, [i for i,x in enumerate(sent) if x == word], 1),1)).T/bDenom.T
+        return A, B 
+    
 def logExpSumTrick(array,axis=None):
-    largest = np.max(array,axis)
+    largest = np.max(array,axis,keepdims=True)
     #print("largest: " + str(largest))
-    total = np.sum(np.exp(array-largest),axis)
+    total = np.sum(np.exp(array-largest),axis,keepdims=True)
 #     for prob in array:
 #         total += math.exp(prob-largest)
     total = np.log(total)
